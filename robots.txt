@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zinss.github.io/brc-starze/sitemap.xml
