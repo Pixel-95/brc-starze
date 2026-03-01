@@ -1,1 +1,1 @@
-# brc-starze
+README
