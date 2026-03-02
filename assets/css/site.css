@@ -196,28 +196,16 @@ a.button,
   position: relative;
 }
 
-.brand__mark::before,
-.brand__mark::after {
+.brand__mark::before {
   content: "";
   position: absolute;
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 999px;
-}
-
-.brand__mark::before {
-  width: 1rem;
-  height: 0.16rem;
-  left: 0.75rem;
-  top: 1.06rem;
-  transform: rotate(-35deg);
+  inset: 0.34rem;
+  background: url("../../media/icon.png") center / contain no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(6, 47, 57, 0.18));
 }
 
 .brand__mark::after {
-  width: 0.82rem;
-  height: 0.16rem;
-  left: 0.95rem;
-  top: 1.34rem;
-  transform: rotate(38deg);
+  content: none;
 }
 
 .brand__text {
