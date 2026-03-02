@@ -434,16 +434,12 @@ ready(() => {
     let mobileUpDistance = 0;
     let mobileDownDistance = 0;
     let lastDirection = "idle";
-    let lastDirectionAt = 0;
     let cooldownUntil = 0;
-    let mobileHideTimer = 0;
 
-    const MOBILE_MIN_SCROLL = 160;
+    const MOBILE_MIN_SCROLL = 96;
     const MOBILE_NOISE_DELTA = 6;
-    const MOBILE_SHOW_DISTANCE = 18;
-    const MOBILE_HIDE_DISTANCE = 12;
-    const MOBILE_PAUSE_HOLD = 200;
-    const MOBILE_IDLE_HIDE_DELAY = 240;
+    const MOBILE_SHOW_DISTANCE = 14;
+    const MOBILE_HIDE_DISTANCE = 10;
     const MOBILE_TOGGLE_COOLDOWN = 180;
 
     if (!overlayCta || pageConfig.showStickyCta === false) {
@@ -474,22 +470,6 @@ ready(() => {
       cooldownUntil = now + MOBILE_TOGGLE_COOLDOWN;
     };
 
-    const clearMobileHideTimer = () => {
-      if (!mobileHideTimer) {
-        return;
-      }
-
-      window.clearTimeout(mobileHideTimer);
-      mobileHideTimer = 0;
-    };
-
-    const scheduleMobileHide = () => {
-      clearMobileHideTimer();
-      mobileHideTimer = window.setTimeout(() => {
-        setOverlayVisibility(false, performance.now(), true);
-      }, MOBILE_IDLE_HIDE_DELAY);
-    };
-
     if (endCta && "IntersectionObserver" in window) {
       const endObserver = new IntersectionObserver(
         (entries) => {
@@ -516,7 +496,6 @@ ready(() => {
 
         if (isMobile) {
           if (overlayBlocked || currentY < MOBILE_MIN_SCROLL) {
-            clearMobileHideTimer();
             mobileUpDistance = 0;
             mobileDownDistance = 0;
             lastDirection = "idle";
@@ -528,14 +507,10 @@ ready(() => {
           const absDelta = Math.abs(delta);
 
           if (absDelta < MOBILE_NOISE_DELTA) {
-            if (mobileVisible && now - lastDirectionAt <= MOBILE_PAUSE_HOLD) {
-              overlayCta.classList.add("is-visible");
-            }
             return;
           }
 
           const direction = delta < 0 ? "up" : "down";
-          lastDirectionAt = now;
 
           if (direction !== lastDirection) {
             mobileUpDistance = 0;
@@ -549,10 +524,8 @@ ready(() => {
 
             if (mobileUpDistance >= MOBILE_SHOW_DISTANCE) {
               setOverlayVisibility(true, now);
-              scheduleMobileHide();
             }
           } else {
-            clearMobileHideTimer();
             mobileDownDistance += absDelta;
             mobileUpDistance = 0;
 
@@ -564,7 +537,6 @@ ready(() => {
           return;
         }
 
-        clearMobileHideTimer();
         overlayCta.classList.toggle("is-visible", progress > 0.24 && !overlayBlocked);
         overlayCta.classList.remove("is-mobile-expanded");
       }

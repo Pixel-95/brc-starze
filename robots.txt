@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://zinss.github.io/brc-starze/sitemap.xml
+Sitemap: https://mario-zinsser.com/sitemap.xml
