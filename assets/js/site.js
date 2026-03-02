@@ -33,7 +33,7 @@ ready(() => {
   const timelineSteps = [...document.querySelectorAll("[data-timeline-step]")];
   const heroSections = !reduceMotion ? [...document.querySelectorAll("[data-hero-depth]")] : [];
   const galleries = initGalleryIndicators();
-  const overlayController = initOverlayCta({ touchCapable });
+  initOverlayCta();
 
   highlightHashTarget();
   window.addEventListener("hashchange", highlightHashTarget);
@@ -99,7 +99,6 @@ ready(() => {
     updateHeroDepth();
     updateTimelineProgress();
     updateTimelineStates();
-    overlayController.update(window.scrollY, lastScrollY);
     syncGalleries();
     lastScrollY = window.scrollY;
     ticking = false;
@@ -118,7 +117,6 @@ ready(() => {
   updateHeroDepth();
   updateTimelineProgress();
   updateTimelineStates();
-  overlayController.update(window.scrollY, lastScrollY);
   syncGalleries();
 
   window.addEventListener("scroll", requestTick, { passive: true });
@@ -464,18 +462,14 @@ ready(() => {
     return galleryEntries;
   }
 
-  function initOverlayCta({ touchCapable: canTouch }) {
+  function initOverlayCta() {
     const overlayCta = document.querySelector("[data-overlay-cta]");
     if (!overlayCta) {
-      return { update() {} };
+      return;
     }
 
     overlayCta.classList.add("is-visible");
     overlayCta.classList.remove("is-mobile-expanded");
-
-    return {
-      update() {}
-    };
   }
 
   function highlightHashTarget() {
