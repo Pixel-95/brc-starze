@@ -429,18 +429,18 @@ ready(() => {
     const overlayCta = document.querySelector("[data-overlay-cta]");
     const endCta = document.querySelector("[data-end-cta]");
     let overlayBlocked = false;
-    let mobileState = "hidden";
-    let mobileVisible = false;
-    let mobileUpDistance = 0;
-    let mobileDownDistance = 0;
+    let overlayState = "hidden";
+    let overlayVisible = false;
+    let upDistance = 0;
+    let downDistance = 0;
     let lastDirection = "idle";
     let cooldownUntil = 0;
 
-    const MOBILE_MIN_SCROLL = 96;
-    const MOBILE_NOISE_DELTA = 6;
-    const MOBILE_SHOW_DISTANCE = 14;
-    const MOBILE_HIDE_DISTANCE = 10;
-    const MOBILE_TOGGLE_COOLDOWN = 180;
+    const MIN_SCROLL = 72;
+    const NOISE_DELTA = 4;
+    const SHOW_DISTANCE = 10;
+    const HIDE_DISTANCE = 8;
+    const TOGGLE_COOLDOWN = 150;
 
     if (!overlayCta || pageConfig.showStickyCta === false) {
       return { update() {} };
@@ -448,26 +448,26 @@ ready(() => {
 
     const setOverlayVisibility = (visible, now, force = false) => {
       if (!force) {
-        if (mobileState === "cooldown" && now < cooldownUntil) {
+        if (overlayState === "cooldown" && now < cooldownUntil) {
           return;
         }
 
-        if (visible === mobileVisible) {
+        if (visible === overlayVisible) {
           return;
         }
       }
 
-      mobileVisible = visible;
+      overlayVisible = visible;
       overlayCta.classList.toggle("is-visible", visible);
       overlayCta.classList.remove("is-mobile-expanded");
 
       if (force) {
-        mobileState = visible ? "visible" : "hidden";
+        overlayState = visible ? "visible" : "hidden";
         return;
       }
 
-      mobileState = "cooldown";
-      cooldownUntil = now + MOBILE_TOGGLE_COOLDOWN;
+      overlayState = "cooldown";
+      cooldownUntil = now + TOGGLE_COOLDOWN;
     };
 
     if (endCta && "IntersectionObserver" in window) {
@@ -482,63 +482,51 @@ ready(() => {
 
     return {
       update(currentY, previousY) {
-        const maxScrollable = Math.max(
-          document.documentElement.scrollHeight - window.innerHeight,
-          1
-        );
-        const progress = currentY / maxScrollable;
-        const isMobile = canTouch && window.matchMedia("(max-width: 47.99rem)").matches;
         const now = performance.now();
 
-        if (mobileState === "cooldown" && now >= cooldownUntil) {
-          mobileState = mobileVisible ? "visible" : "hidden";
+        if (overlayState === "cooldown" && now >= cooldownUntil) {
+          overlayState = overlayVisible ? "visible" : "hidden";
         }
 
-        if (isMobile) {
-          if (overlayBlocked || currentY < MOBILE_MIN_SCROLL) {
-            mobileUpDistance = 0;
-            mobileDownDistance = 0;
-            lastDirection = "idle";
-            setOverlayVisibility(false, now, true);
-            return;
-          }
-
-          const delta = currentY - previousY;
-          const absDelta = Math.abs(delta);
-
-          if (absDelta < MOBILE_NOISE_DELTA) {
-            return;
-          }
-
-          const direction = delta < 0 ? "up" : "down";
-
-          if (direction !== lastDirection) {
-            mobileUpDistance = 0;
-            mobileDownDistance = 0;
-            lastDirection = direction;
-          }
-
-          if (direction === "up") {
-            mobileUpDistance += absDelta;
-            mobileDownDistance = 0;
-
-            if (mobileUpDistance >= MOBILE_SHOW_DISTANCE) {
-              setOverlayVisibility(true, now);
-            }
-          } else {
-            mobileDownDistance += absDelta;
-            mobileUpDistance = 0;
-
-            if (mobileDownDistance >= MOBILE_HIDE_DISTANCE) {
-              setOverlayVisibility(false, now);
-            }
-          }
-
+        if (overlayBlocked || currentY < MIN_SCROLL) {
+          upDistance = 0;
+          downDistance = 0;
+          lastDirection = "idle";
+          setOverlayVisibility(false, now, true);
           return;
         }
 
-        overlayCta.classList.toggle("is-visible", progress > 0.24 && !overlayBlocked);
-        overlayCta.classList.remove("is-mobile-expanded");
+        const delta = currentY - previousY;
+        const absDelta = Math.abs(delta);
+
+        if (absDelta < NOISE_DELTA) {
+          return;
+        }
+
+        const direction = delta < 0 ? "up" : "down";
+
+        if (direction !== lastDirection) {
+          upDistance = 0;
+          downDistance = 0;
+          lastDirection = direction;
+        }
+
+        if (direction === "up") {
+          upDistance += absDelta;
+          downDistance = 0;
+
+          if (upDistance >= SHOW_DISTANCE) {
+            setOverlayVisibility(true, now);
+          }
+          return;
+        }
+
+        downDistance += absDelta;
+        upDistance = 0;
+
+        if (downDistance >= HIDE_DISTANCE) {
+          setOverlayVisibility(false, now);
+        }
       }
     };
   }
