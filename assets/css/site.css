@@ -351,13 +351,13 @@ a.button,
   width: 1.2rem;
   height: 0.12rem;
   background: currentColor;
-  margin: 0.14rem auto;
+  margin: 0.08rem auto;
   border-radius: 999px;
   transition: transform var(--transition), opacity var(--transition);
 }
 
 .nav-panel.is-open + .nav-toggle .nav-toggle__bar:nth-child(1) {
-  transform: translateY(0.26rem) rotate(45deg);
+  transform: translateY(0.2rem) rotate(45deg);
 }
 
 .nav-panel.is-open + .nav-toggle .nav-toggle__bar:nth-child(2) {
@@ -365,7 +365,7 @@ a.button,
 }
 
 .nav-panel.is-open + .nav-toggle .nav-toggle__bar:nth-child(3) {
-  transform: translateY(-0.26rem) rotate(-45deg);
+  transform: translateY(-0.2rem) rotate(-45deg);
 }
 
 .main-content {
