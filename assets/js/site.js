@@ -130,15 +130,54 @@ ready(() => {
     const navLinks = document.querySelectorAll("[data-nav-link]");
 
     if (navToggle && navPanel) {
+      const closeNavigation = () => {
+        navPanel.classList.remove("is-open");
+        navToggle.setAttribute("aria-expanded", "false");
+      };
+
       navToggle.addEventListener("click", () => {
-        const isOpen = navPanel.classList.toggle("is-open");
+        const isOpen = !navPanel.classList.contains("is-open");
+        navPanel.classList.toggle("is-open", isOpen);
         navToggle.setAttribute("aria-expanded", String(isOpen));
       });
 
       navPanel.addEventListener("click", (event) => {
         if (event.target.matches("a")) {
-          navPanel.classList.remove("is-open");
-          navToggle.setAttribute("aria-expanded", "false");
+          closeNavigation();
+        }
+      });
+
+      window.addEventListener("scroll", closeNavigation, { passive: true });
+
+      document.addEventListener("pointerdown", (event) => {
+        if (!navPanel.classList.contains("is-open")) {
+          return;
+        }
+
+        const target = event.target;
+        if (navPanel.contains(target) || navToggle.contains(target)) {
+          return;
+        }
+
+        closeNavigation();
+      });
+
+      document.addEventListener("focusin", (event) => {
+        if (!navPanel.classList.contains("is-open")) {
+          return;
+        }
+
+        const target = event.target;
+        if (navPanel.contains(target) || navToggle.contains(target)) {
+          return;
+        }
+
+        closeNavigation();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeNavigation();
         }
       });
     }
@@ -427,107 +466,15 @@ ready(() => {
 
   function initOverlayCta({ touchCapable: canTouch }) {
     const overlayCta = document.querySelector("[data-overlay-cta]");
-    const endCta = document.querySelector("[data-end-cta]");
-    let overlayBlocked = false;
-    let overlayState = "hidden";
-    let overlayVisible = false;
-    let upDistance = 0;
-    let downDistance = 0;
-    let lastDirection = "idle";
-    let cooldownUntil = 0;
-
-    const MIN_SCROLL = 72;
-    const NOISE_DELTA = 4;
-    const SHOW_DISTANCE = 10;
-    const HIDE_DISTANCE = 8;
-    const TOGGLE_COOLDOWN = 150;
-
-    if (!overlayCta || pageConfig.showStickyCta === false) {
+    if (!overlayCta) {
       return { update() {} };
     }
 
-    const setOverlayVisibility = (visible, now, force = false) => {
-      if (!force) {
-        if (overlayState === "cooldown" && now < cooldownUntil) {
-          return;
-        }
-
-        if (visible === overlayVisible) {
-          return;
-        }
-      }
-
-      overlayVisible = visible;
-      overlayCta.classList.toggle("is-visible", visible);
-      overlayCta.classList.remove("is-mobile-expanded");
-
-      if (force) {
-        overlayState = visible ? "visible" : "hidden";
-        return;
-      }
-
-      overlayState = "cooldown";
-      cooldownUntil = now + TOGGLE_COOLDOWN;
-    };
-
-    if (endCta && "IntersectionObserver" in window) {
-      const endObserver = new IntersectionObserver(
-        (entries) => {
-          overlayBlocked = entries.some((entry) => entry.isIntersecting);
-        },
-        { threshold: 0.18 }
-      );
-      endObserver.observe(endCta);
-    }
+    overlayCta.classList.add("is-visible");
+    overlayCta.classList.remove("is-mobile-expanded");
 
     return {
-      update(currentY, previousY) {
-        const now = performance.now();
-
-        if (overlayState === "cooldown" && now >= cooldownUntil) {
-          overlayState = overlayVisible ? "visible" : "hidden";
-        }
-
-        if (overlayBlocked || currentY < MIN_SCROLL) {
-          upDistance = 0;
-          downDistance = 0;
-          lastDirection = "idle";
-          setOverlayVisibility(false, now, true);
-          return;
-        }
-
-        const delta = currentY - previousY;
-        const absDelta = Math.abs(delta);
-
-        if (absDelta < NOISE_DELTA) {
-          return;
-        }
-
-        const direction = delta < 0 ? "up" : "down";
-
-        if (direction !== lastDirection) {
-          upDistance = 0;
-          downDistance = 0;
-          lastDirection = direction;
-        }
-
-        if (direction === "up") {
-          upDistance += absDelta;
-          downDistance = 0;
-
-          if (upDistance >= SHOW_DISTANCE) {
-            setOverlayVisibility(true, now);
-          }
-          return;
-        }
-
-        downDistance += absDelta;
-        upDistance = 0;
-
-        if (downDistance >= HIDE_DISTANCE) {
-          setOverlayVisibility(false, now);
-        }
-      }
+      update() {}
     };
   }
 
