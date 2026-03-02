@@ -1,3 +1,5 @@
+const siteConfig = window.SITE_CONFIG || {};
+const analyticsConfig = siteConfig.analytics || {};
 const pageConfig = window.PAGE_CONFIG || {};
 
 function ready(fn) {
@@ -21,6 +23,7 @@ ready(() => {
     body.classList.add("is-touch");
   }
 
+  initAnalytics(analyticsConfig);
   initNavigation();
   initStaggerGroups();
   initPremiumCardMarkup();
@@ -470,6 +473,125 @@ ready(() => {
 
     overlayCta.classList.add("is-visible");
     overlayCta.classList.remove("is-mobile-expanded");
+  }
+
+  function initAnalytics(config) {
+    const measurementId =
+      typeof config.ga4MeasurementId === "string" ? config.ga4MeasurementId.trim() : "";
+
+    if (!measurementId || measurementId === "G-XXXXXXXXXX") {
+      return;
+    }
+
+    const debugMode = config.debug === true;
+    const blueRiverHosts = new Set(
+      (Array.isArray(config.blueRiverHostnames)
+        ? config.blueRiverHostnames
+        : ["www.blueriver-canyoning.de", "blueriver-canyoning.de"]
+      ).map((host) => String(host).toLowerCase())
+    );
+
+    window.dataLayer = window.dataLayer || [];
+    window.gtag =
+      window.gtag ||
+      function gtag() {
+        window.dataLayer.push(arguments);
+      };
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+    document.head.appendChild(script);
+
+    window.gtag("js", new Date());
+    window.gtag("config", measurementId, pruneAnalyticsParams({
+      send_page_view: false,
+      debug_mode: debugMode ? true : undefined
+    }));
+
+    window.gtag("event", "page_view", pruneAnalyticsParams({
+      page_title: document.title,
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+      page_slug: pageConfig.slug || undefined,
+      page_type: pageConfig.pageType || undefined,
+      debug_mode: debugMode ? true : undefined
+    }));
+
+    document.addEventListener(
+      "click",
+      (event) => {
+        const anchor =
+          event.target instanceof Element ? event.target.closest("a[href]") : null;
+        if (!anchor) {
+          return;
+        }
+
+        let url;
+        try {
+          url = new URL(anchor.href, window.location.href);
+        } catch {
+          return;
+        }
+
+        if (url.origin === window.location.origin) {
+          return;
+        }
+
+        const eventParams = pruneAnalyticsParams({
+          destination_url: url.href,
+          destination_host: url.hostname,
+          link_text: getAnalyticsLinkText(anchor),
+          link_placement: getAnalyticsLinkPlacement(anchor),
+          page_slug: pageConfig.slug || undefined,
+          page_type: pageConfig.pageType || undefined,
+          debug_mode: debugMode ? true : undefined,
+          transport_type: "beacon"
+        });
+
+        window.gtag("event", "external_link_click", eventParams);
+
+        if (blueRiverHosts.has(url.hostname.toLowerCase())) {
+          window.gtag("event", "blueriver_click", eventParams);
+        }
+      },
+      { capture: true }
+    );
+  }
+
+  function pruneAnalyticsParams(params) {
+    return Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "")
+    );
+  }
+
+  function getAnalyticsLinkText(anchor) {
+    const label = anchor.getAttribute("aria-label") || anchor.textContent || "";
+    return label.replace(/\s+/g, " ").trim();
+  }
+
+  function getAnalyticsLinkPlacement(anchor) {
+    if (anchor.matches("[data-overlay-cta]")) {
+      return "overlay_cta";
+    }
+
+    if (anchor.closest(".recommendation")) {
+      return "recommendation_block";
+    }
+
+    if (anchor.closest(".hero")) {
+      return "hero";
+    }
+
+    if (anchor.closest(".site-header")) {
+      return "header";
+    }
+
+    if (anchor.closest(".site-footer")) {
+      return "footer";
+    }
+
+    return "content";
   }
 
   function highlightHashTarget() {
