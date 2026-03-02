@@ -429,11 +429,66 @@ ready(() => {
     const overlayCta = document.querySelector("[data-overlay-cta]");
     const endCta = document.querySelector("[data-end-cta]");
     let overlayBlocked = false;
-    let mobileStreak = 0;
+    let mobileState = "hidden";
+    let mobileVisible = false;
+    let mobileUpDistance = 0;
+    let mobileDownDistance = 0;
+    let lastDirection = "idle";
+    let lastDirectionAt = 0;
+    let cooldownUntil = 0;
+    let mobileHideTimer = 0;
+
+    const MOBILE_MIN_SCROLL = 160;
+    const MOBILE_NOISE_DELTA = 6;
+    const MOBILE_SHOW_DISTANCE = 18;
+    const MOBILE_HIDE_DISTANCE = 12;
+    const MOBILE_PAUSE_HOLD = 200;
+    const MOBILE_IDLE_HIDE_DELAY = 240;
+    const MOBILE_TOGGLE_COOLDOWN = 180;
 
     if (!overlayCta || pageConfig.showStickyCta === false) {
       return { update() {} };
     }
+
+    const setOverlayVisibility = (visible, now, force = false) => {
+      if (!force) {
+        if (mobileState === "cooldown" && now < cooldownUntil) {
+          return;
+        }
+
+        if (visible === mobileVisible) {
+          return;
+        }
+      }
+
+      mobileVisible = visible;
+      overlayCta.classList.toggle("is-visible", visible);
+      overlayCta.classList.remove("is-mobile-expanded");
+
+      if (force) {
+        mobileState = visible ? "visible" : "hidden";
+        return;
+      }
+
+      mobileState = "cooldown";
+      cooldownUntil = now + MOBILE_TOGGLE_COOLDOWN;
+    };
+
+    const clearMobileHideTimer = () => {
+      if (!mobileHideTimer) {
+        return;
+      }
+
+      window.clearTimeout(mobileHideTimer);
+      mobileHideTimer = 0;
+    };
+
+    const scheduleMobileHide = () => {
+      clearMobileHideTimer();
+      mobileHideTimer = window.setTimeout(() => {
+        setOverlayVisibility(false, performance.now(), true);
+      }, MOBILE_IDLE_HIDE_DELAY);
+    };
 
     if (endCta && "IntersectionObserver" in window) {
       const endObserver = new IntersectionObserver(
@@ -453,22 +508,63 @@ ready(() => {
         );
         const progress = currentY / maxScrollable;
         const isMobile = canTouch && window.matchMedia("(max-width: 47.99rem)").matches;
-        const scrollingDown = currentY > previousY + 2;
-        const scrollingUp = currentY < previousY - 2;
+        const now = performance.now();
+
+        if (mobileState === "cooldown" && now >= cooldownUntil) {
+          mobileState = mobileVisible ? "visible" : "hidden";
+        }
 
         if (isMobile) {
-          if (scrollingDown && currentY > 120 && !overlayBlocked) {
-            mobileStreak = Math.min(mobileStreak + 1, 4);
-          } else if (scrollingUp) {
-            mobileStreak = 0;
+          if (overlayBlocked || currentY < MOBILE_MIN_SCROLL) {
+            clearMobileHideTimer();
+            mobileUpDistance = 0;
+            mobileDownDistance = 0;
+            lastDirection = "idle";
+            setOverlayVisibility(false, now, true);
+            return;
           }
 
-          const shouldShow = currentY > 120 && scrollingDown && !overlayBlocked;
-          overlayCta.classList.toggle("is-visible", shouldShow);
-          overlayCta.classList.toggle("is-mobile-expanded", shouldShow && mobileStreak >= 2);
+          const delta = currentY - previousY;
+          const absDelta = Math.abs(delta);
+
+          if (absDelta < MOBILE_NOISE_DELTA) {
+            if (mobileVisible && now - lastDirectionAt <= MOBILE_PAUSE_HOLD) {
+              overlayCta.classList.add("is-visible");
+            }
+            return;
+          }
+
+          const direction = delta < 0 ? "up" : "down";
+          lastDirectionAt = now;
+
+          if (direction !== lastDirection) {
+            mobileUpDistance = 0;
+            mobileDownDistance = 0;
+            lastDirection = direction;
+          }
+
+          if (direction === "up") {
+            mobileUpDistance += absDelta;
+            mobileDownDistance = 0;
+
+            if (mobileUpDistance >= MOBILE_SHOW_DISTANCE) {
+              setOverlayVisibility(true, now);
+              scheduleMobileHide();
+            }
+          } else {
+            clearMobileHideTimer();
+            mobileDownDistance += absDelta;
+            mobileUpDistance = 0;
+
+            if (mobileDownDistance >= MOBILE_HIDE_DISTANCE) {
+              setOverlayVisibility(false, now);
+            }
+          }
+
           return;
         }
 
+        clearMobileHideTimer();
         overlayCta.classList.toggle("is-visible", progress > 0.24 && !overlayBlocked);
         overlayCta.classList.remove("is-mobile-expanded");
       }
